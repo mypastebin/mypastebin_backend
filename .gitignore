@@ -35,3 +35,6 @@ build/
 # Exclude application.properties
 **/application.properties
 **/application-docker.properties
+
+*.jar
+src/main/resources/credentials.json
