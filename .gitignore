@@ -21,3 +21,6 @@ src/main/resources/credentials.json
 /src/main/resources/application.properties
 /src/main/resources/application-docker.properties
 /HELP.md
+
+logs/
+*.log
