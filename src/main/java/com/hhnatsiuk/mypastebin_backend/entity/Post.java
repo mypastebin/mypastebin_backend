@@ -39,6 +39,10 @@ public class Post {
     @Transient
     private String content;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fk_user_id", nullable = false)
+    private User user;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = OffsetDateTime.now();
