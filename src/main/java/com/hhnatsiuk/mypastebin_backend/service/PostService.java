@@ -24,12 +24,12 @@ public class PostService {
     private static final String FILE_EXTENSION = ".txt";
 
     private final PostRepository postRepository;
-    private final HashServiceClient hashServiceClient;
+    private final HashGeneratorService hashServiceClient;
     private final GoogleCloudStorageService googleCloudStorageService;
 
     @Autowired
     public PostService(PostRepository postRepository,
-                       HashServiceClient hashServiceClient,
+                       HashGeneratorService hashServiceClient,
                        GoogleCloudStorageService googleCloudStorageService) {
         this.postRepository = postRepository;
         this.hashServiceClient = hashServiceClient;

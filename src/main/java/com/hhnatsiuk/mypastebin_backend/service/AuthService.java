@@ -1,8 +1,12 @@
 package com.hhnatsiuk.mypastebin_backend.service;
 
 import com.hhnatsiuk.mypastebin_backend.dto.LoginDTO;
+import com.hhnatsiuk.mypastebin_backend.dto.LoginResponse;
+import com.hhnatsiuk.mypastebin_backend.dto.ProfileDTO;
 import com.hhnatsiuk.mypastebin_backend.dto.SignUpDTO;
+import com.hhnatsiuk.mypastebin_backend.entity.Post;
 import com.hhnatsiuk.mypastebin_backend.entity.User;
+import com.hhnatsiuk.mypastebin_backend.repository.PostRepository;
 import com.hhnatsiuk.mypastebin_backend.repository.UserRepository;
 import com.hhnatsiuk.mypastebin_backend.utils.JwtTokenUtil;
 import org.apache.logging.log4j.LogManager;
@@ -12,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -20,17 +25,19 @@ public class AuthService {
     private static final Logger logger = LogManager.getLogger(AuthService.class);
 
     private final UserRepository userRepository;
+    private final PostRepository postRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenUtil jwtTokenUtil;
 
     @Autowired
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenUtil jwtTokenUtil) {
+    public AuthService(UserRepository userRepository, PostRepository postRepository, PasswordEncoder passwordEncoder, JwtTokenUtil jwtTokenUtil) {
         this.userRepository = userRepository;
+        this.postRepository = postRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenUtil = jwtTokenUtil;
     }
 
-    public String login(LoginDTO loginDTO) {
+    public LoginResponse login(LoginDTO loginDTO) {
         Optional<User> userOptional = userRepository.findByUsername(loginDTO.getUsername());
 
         if (userOptional.isPresent()) {
@@ -40,7 +47,17 @@ public class AuthService {
                 userRepository.save(user);
 
                 String token = jwtTokenUtil.generateToken(user);
-                return token;
+
+                List<Post> userPosts = postRepository.findByUser(user);
+
+                ProfileDTO profileDTO = new ProfileDTO(user, userPosts);
+
+                LoginResponse response = new LoginResponse();
+                response.setToken(token);
+                response.setExpiresIn(jwtTokenUtil.getExpirationTime());
+                response.setUser(profileDTO);
+
+                return response;
             }
         }
 

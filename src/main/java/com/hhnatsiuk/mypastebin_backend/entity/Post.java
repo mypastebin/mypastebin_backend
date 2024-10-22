@@ -40,7 +40,7 @@ public class Post {
     private String content;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "fk_user_id", nullable = false)
+    @JoinColumn(name = "fk_user_id", nullable = true)
     private User user;
 
     @PrePersist

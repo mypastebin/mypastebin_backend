@@ -2,7 +2,10 @@ package com.hhnatsiuk.mypastebin_backend.controller;
 
 import com.hhnatsiuk.mypastebin_backend.dto.PostDTO;
 import com.hhnatsiuk.mypastebin_backend.entity.Post;
+import com.hhnatsiuk.mypastebin_backend.entity.User;
+import com.hhnatsiuk.mypastebin_backend.repository.UserRepository;
 import com.hhnatsiuk.mypastebin_backend.service.PostService;
+import com.hhnatsiuk.mypastebin_backend.utils.JwtTokenUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,34 +24,53 @@ public class PostManagementController {
     private static final Logger logger = LogManager.getLogger(PostManagementController.class);
 
     private final PostService postService;
+    private final JwtTokenUtil jwtTokenUtil;
+    private final UserRepository userRepository;
+
 
     @Autowired
-    public PostManagementController(PostService postService) {
+    public PostManagementController(PostService postService, JwtTokenUtil jwtTokenUtil, UserRepository userRepository) {
         this.postService = postService;
+        this.jwtTokenUtil = jwtTokenUtil;
+        this.userRepository = userRepository;
     }
 
     @PostMapping
-    public ResponseEntity<PostDTO> createPost(@RequestBody Post post) {
+    public ResponseEntity<PostDTO> createPost(@RequestBody Post post, @RequestHeader("Authorization") String tokenHeader) {
         logger.info("Received POST request to create a new post");
         logger.debug("Request details: title = {}, category = {}, is empty content = {}, expirationDate = {}",
                 post.getTitle(), post.getCategory(), post.getContent().isEmpty(), post.getExpirationDate());
 
         try {
-            Post createdPost = postService.createPost(post);
-            logger.info("Post created successfully with ID: {}", createdPost.getId());
+            String token = jwtTokenUtil.extractTokenFromHeader(tokenHeader);
+            String username = jwtTokenUtil.extractUsername(token);
 
-            PostDTO postDTO = new PostDTO();
-            postDTO.setHash(createdPost.getHash());
-            postDTO.setTitle(createdPost.getTitle());
-            postDTO.setCategory(createdPost.getCategory());
-            postDTO.setExpirationDate(createdPost.getExpirationDate().toString());
+            Optional<User> userOptional = userRepository.findByUsername(username);
+            if (userOptional.isPresent()) {
+                User user = userOptional.get();
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(postDTO);
+                post.setUser(user);
+
+                Post createdPost = postService.createPost(post);
+                logger.info("Post created successfully with ID: {}", createdPost.getId());
+
+                PostDTO postDTO = new PostDTO();
+                postDTO.setHash(createdPost.getHash());
+                postDTO.setTitle(createdPost.getTitle());
+                postDTO.setCategory(createdPost.getCategory());
+                postDTO.setExpirationDate(createdPost.getExpirationDate().toString());
+
+                return ResponseEntity.status(HttpStatus.CREATED).body(postDTO);
+            } else {
+                logger.error("User not found for username: {}", username);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
         } catch (Exception e) {
             logger.error("Error occurred while creating post: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
 
     @GetMapping("/{hash}")
     public ResponseEntity<PostDTO> getPost(@PathVariable String hash) {
