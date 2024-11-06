@@ -29,7 +29,7 @@ public class JwtTokenUtil {
                 .setClaims(claims)
                 .setSubject(user.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + expirationInMinutes * 60 * 10))
+                .setExpiration(new Date(System.currentTimeMillis() + expirationInMinutes * 60 * 1000))
                 .signWith(SignatureAlgorithm.HS256, secretKey)
                 .compact();
     }
@@ -39,10 +39,14 @@ public class JwtTokenUtil {
     }
 
     private Claims getClaimsFromToken(String token) {
-        return Jwts.parser()
-                .setSigningKey(secretKey)
-                .parseClaimsJws(token)
-                .getBody();
+        try {
+            return Jwts.parser()
+                    .setSigningKey(secretKey)
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid token", e);
+        }
     }
 
     public String extractTokenFromHeader(String header) {

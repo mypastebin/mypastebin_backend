@@ -36,40 +36,45 @@ public class PostManagementController {
     }
 
     @PostMapping
-    public ResponseEntity<PostDTO> createPost(@RequestBody Post post, @RequestHeader("Authorization") String tokenHeader) {
+    public ResponseEntity<PostDTO> createPost(@RequestBody Post post, @RequestHeader(value = "Authorization", required = false) String tokenHeader) {
         logger.info("Received POST request to create a new post");
         logger.debug("Request details: title = {}, category = {}, is empty content = {}, expirationDate = {}",
                 post.getTitle(), post.getCategory(), post.getContent().isEmpty(), post.getExpirationDate());
 
         try {
-            String token = jwtTokenUtil.extractTokenFromHeader(tokenHeader);
-            String username = jwtTokenUtil.extractUsername(token);
+            if (tokenHeader != null && !tokenHeader.isEmpty()) {
+                String token = jwtTokenUtil.extractTokenFromHeader(tokenHeader);
+                String username = jwtTokenUtil.extractUsername(token);
 
-            Optional<User> userOptional = userRepository.findByUsername(username);
-            if (userOptional.isPresent()) {
-                User user = userOptional.get();
-
-                post.setUser(user);
-
-                Post createdPost = postService.createPost(post);
-                logger.info("Post created successfully with ID: {}", createdPost.getId());
-
-                PostDTO postDTO = new PostDTO();
-                postDTO.setHash(createdPost.getHash());
-                postDTO.setTitle(createdPost.getTitle());
-                postDTO.setCategory(createdPost.getCategory());
-                postDTO.setExpirationDate(createdPost.getExpirationDate().toString());
-
-                return ResponseEntity.status(HttpStatus.CREATED).body(postDTO);
+                Optional<User> userOptional = userRepository.findByUsername(username);
+                if (userOptional.isPresent()) {
+                    User user = userOptional.get();
+                    post.setUser(user);
+                    logger.info("Post will be associated with user: " + user.getUsername());
+                } else {
+                    logger.error("User not found for username: {}", username);
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                }
             } else {
-                logger.error("User not found for username: {}", username);
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                logger.info("No Authorization header provided, proceeding without user association.");
             }
+
+            Post createdPost = postService.createPost(post);
+            logger.info("Post created successfully with ID: {}", createdPost.getId());
+
+            PostDTO postDTO = new PostDTO();
+            postDTO.setHash(createdPost.getHash());
+            postDTO.setTitle(createdPost.getTitle());
+            postDTO.setCategory(createdPost.getCategory());
+            postDTO.setExpirationDate(createdPost.getExpirationDate().toString());
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(postDTO);
         } catch (Exception e) {
             logger.error("Error occurred while creating post: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
 
 
     @GetMapping("/{hash}")
