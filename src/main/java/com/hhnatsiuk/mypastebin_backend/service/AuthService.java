@@ -1,7 +1,7 @@
 package com.hhnatsiuk.mypastebin_backend.service;
 
 import com.hhnatsiuk.mypastebin_backend.dto.LoginDTO;
-import com.hhnatsiuk.mypastebin_backend.dto.LoginResponse;
+import com.hhnatsiuk.mypastebin_backend.response.LoginResponse;
 import com.hhnatsiuk.mypastebin_backend.dto.ProfileDTO;
 import com.hhnatsiuk.mypastebin_backend.dto.SignUpDTO;
 import com.hhnatsiuk.mypastebin_backend.entity.Post;

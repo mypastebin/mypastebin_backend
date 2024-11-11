@@ -1,5 +1,6 @@
-package com.hhnatsiuk.mypastebin_backend.dto;
+package com.hhnatsiuk.mypastebin_backend.response;
 
+import com.hhnatsiuk.mypastebin_backend.dto.ProfileDTO;
 import lombok.Data;
 
 @Data

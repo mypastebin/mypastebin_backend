@@ -50,7 +50,7 @@ public class PostManagementController {
                 if (userOptional.isPresent()) {
                     User user = userOptional.get();
                     post.setUser(user);
-                    logger.info("Post will be associated with user: " + user.getUsername());
+                    logger.info("Post will be associated with user: {}", user.getUsername());
                 } else {
                     logger.error("User not found for username: {}", username);
                     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
