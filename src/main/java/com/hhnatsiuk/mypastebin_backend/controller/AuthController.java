@@ -9,7 +9,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -46,6 +49,17 @@ public class AuthController {
             logger.warn("Signup failed for email: {} or username: {}", signUpDTO.getEmail(), signUpDTO.getUsername());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User already exists with the given email or username");
         }
+    }
+
+    @GetMapping("/google/success")
+    public ResponseEntity<LoginResponse> googleLoginSuccess(OAuth2AuthenticationToken authentication) {
+        logger.info("Google Login started");
+
+        String email = authentication.getPrincipal().getAttribute("email");
+        LoginResponse response = authService.processGoogleLogin(email);
+
+        logger.info("User {} logged in with Google", email);
+        return ResponseEntity.ok(response);
     }
 
 }

@@ -28,9 +28,11 @@ public class SecurityConfig {
     private String[] permittedUrls;
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, CustomOAuth2SuccessHandler customOAuth2SuccessHandler) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.customOAuth2SuccessHandler = customOAuth2SuccessHandler;
     }
 
     @Bean
@@ -41,6 +43,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(permittedUrls).permitAll()
                         .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(customOAuth2SuccessHandler)
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)

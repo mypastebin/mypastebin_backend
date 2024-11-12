@@ -39,7 +39,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         logger.info("Incoming request to URI: " + requestURI);
         logger.info("Authorization Header: " + (authorizationHeader != null ? authorizationHeader : "No Authorization Header"));
 
-        if (requestURI.equals("/api/posts") || requestURI.equals("/api/posts/recent") || requestURI.matches("/api/posts/.*")) {
+        // FIXME
+        if (requestURI.equals("/api/posts") || requestURI.equals("/api/posts/recent") || requestURI.matches("/api/posts/.*")
+                ||  requestURI.matches("/api/auth/google/callback") || requestURI.startsWith("/oauth2/") || requestURI.equals("/api/auth/google/success")) {
             logger.info("Public endpoint access allowed without token for URI: " + requestURI);
             filterChain.doFilter(request, response);
             return;

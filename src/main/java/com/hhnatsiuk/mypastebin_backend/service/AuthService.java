@@ -45,19 +45,7 @@ public class AuthService {
             if (passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
                 user.setLastLoginAt(OffsetDateTime.now());
                 userRepository.save(user);
-
-                String token = jwtTokenUtil.generateToken(user);
-
-                List<Post> userPosts = postRepository.findByUser(user);
-
-                ProfileDTO profileDTO = new ProfileDTO(user, userPosts);
-
-                LoginResponse response = new LoginResponse();
-                response.setToken(token);
-                response.setExpiresIn(jwtTokenUtil.getExpirationTime());
-                response.setUser(profileDTO);
-
-                return response;
+                return createLoginResponse(user);
             }
         }
 
@@ -88,4 +76,30 @@ public class AuthService {
         return savedUser;
     }
 
+    public LoginResponse processGoogleLogin(String email) {
+        logger.info("Google Login process started");
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            User newUser = new User();
+            newUser.setEmail(email);
+            newUser.setUsername(email.split("@")[0]);
+            newUser.setIsActive(true);
+            return userRepository.save(newUser);
+        });
+        logger.info("User should be saved via google.");
+        return createLoginResponse(user);
+    }
+
+    private LoginResponse createLoginResponse(User user) {
+        String token = jwtTokenUtil.generateToken(user);
+        List<Post> userPosts = postRepository.findByUser(user);
+        ProfileDTO profileDTO = new ProfileDTO(user, userPosts);
+
+        LoginResponse response = new LoginResponse();
+        response.setToken(token);
+        response.setExpiresIn(jwtTokenUtil.getExpirationTime());
+        response.setUser(profileDTO);
+
+        return response;
+    }
 }
+
