@@ -41,7 +41,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // FIXME
         if (requestURI.equals("/api/posts") || requestURI.equals("/api/posts/recent") || requestURI.matches("/api/posts/.*")
-                ||  requestURI.matches("/api/auth/google/callback") || requestURI.startsWith("/oauth2/") || requestURI.equals("/api/auth/google/success")) {
+                ||  requestURI.matches("/api/auth/google/callback") || requestURI.startsWith("/oauth2/") || requestURI.equals("/api/auth/google/success")
+                ||  requestURI.startsWith("/oauth2/") || requestURI.startsWith("/login/oauth2/") || requestURI.equals("/api/auth/google/success")) {
             logger.info("Public endpoint access allowed without token for URI: " + requestURI);
             filterChain.doFilter(request, response);
             return;

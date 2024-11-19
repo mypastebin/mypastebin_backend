@@ -61,5 +61,4 @@ public class AuthController {
         logger.info("User {} logged in with Google", email);
         return ResponseEntity.ok(response);
     }
-
 }

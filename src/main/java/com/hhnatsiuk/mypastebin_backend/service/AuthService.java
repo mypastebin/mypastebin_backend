@@ -42,7 +42,10 @@ public class AuthService {
 
         if (userOptional.isPresent()) {
             User user = userOptional.get();
-            if (passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
+            if (Boolean.TRUE.equals(user.getOauth2User())) {
+                throw new RuntimeException("Please log in using Google");
+            }
+            if (user.getPassword() != null && passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
                 user.setLastLoginAt(OffsetDateTime.now());
                 userRepository.save(user);
                 return createLoginResponse(user);
@@ -78,14 +81,17 @@ public class AuthService {
 
     public LoginResponse processGoogleLogin(String email) {
         logger.info("Google Login process started");
+
         User user = userRepository.findByEmail(email).orElseGet(() -> {
             User newUser = new User();
             newUser.setEmail(email);
             newUser.setUsername(email.split("@")[0]);
             newUser.setIsActive(true);
+            newUser.setOauth2User(true);
             return userRepository.save(newUser);
         });
-        logger.info("User should be saved via google.");
+
+        logger.info("User {} logged in with Google", email);
         return createLoginResponse(user);
     }
 

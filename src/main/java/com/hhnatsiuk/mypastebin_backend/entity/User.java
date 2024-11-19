@@ -26,7 +26,7 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String username;
 
-    @Column(nullable = false)
+    @Column
     private String password;
 
     @Column(name = "created_at", nullable = false)
@@ -44,6 +44,8 @@ public class User {
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
+
+    private Boolean oauth2User = false;
 
     @PrePersist
     protected void onCreate() {
