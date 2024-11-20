@@ -55,6 +55,7 @@ public class AuthService {
         throw new RuntimeException("Invalid username or password");
     }
 
+
     public User signup(SignUpDTO signUpDTO) {
         logger.debug("Attempting to sign up a new user with email: {} and username: {}", signUpDTO.getEmail(), signUpDTO.getUsername());
 
@@ -79,21 +80,6 @@ public class AuthService {
         return savedUser;
     }
 
-    public LoginResponse processGoogleLogin(String email) {
-        logger.info("Google Login process started");
-
-        User user = userRepository.findByEmail(email).orElseGet(() -> {
-            User newUser = new User();
-            newUser.setEmail(email);
-            newUser.setUsername(email.split("@")[0]);
-            newUser.setIsActive(true);
-            newUser.setOauth2User(true);
-            return userRepository.save(newUser);
-        });
-
-        logger.info("User {} logged in with Google", email);
-        return createLoginResponse(user);
-    }
 
     private LoginResponse createLoginResponse(User user) {
         String token = jwtTokenUtil.generateToken(user);

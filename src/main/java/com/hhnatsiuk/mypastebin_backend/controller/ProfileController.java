@@ -30,13 +30,8 @@ public class ProfileController {
 
     @GetMapping("/api/profile")
     public ResponseEntity<ProfileDTO> getProfile(@RequestHeader("Authorization") String tokenHeader) {
-        logger.debug("Received profile request with token header: {}", tokenHeader);
-
         String token = jwtTokenUtil.extractTokenFromHeader(tokenHeader);
-        logger.debug("Extracted token: {}", token);
-
         String username = jwtTokenUtil.extractUsername(token);
-        logger.info("Fetching profile for user: {}", username);
 
         User user = profileService.getUserByUsername(username);
         if (user == null) {
@@ -47,7 +42,6 @@ public class ProfileController {
         logger.info("User found: {}", user.getUsername());
 
         List<Post> posts = profileService.getUserPosts(user);
-        logger.debug("Number of posts found for user {}: {}", user.getUsername(), posts.size());
 
         ProfileDTO profile = new ProfileDTO(user, posts);
         logger.info("ProfileDTO created for user: {}", user.getUsername());

@@ -2,7 +2,12 @@ package com.hhnatsiuk.mypastebin_backend.service;
 
 import com.hhnatsiuk.mypastebin_backend.dto.PostDTO;
 import com.hhnatsiuk.mypastebin_backend.entity.Post;
+import com.hhnatsiuk.mypastebin_backend.entity.User;
+import com.hhnatsiuk.mypastebin_backend.exception.NotFoundException;
+import com.hhnatsiuk.mypastebin_backend.exception.UnauthorizedException;
 import com.hhnatsiuk.mypastebin_backend.repository.PostRepository;
+import com.hhnatsiuk.mypastebin_backend.repository.UserRepository;
+import com.hhnatsiuk.mypastebin_backend.utils.JwtTokenUtil;
 import jakarta.transaction.Transactional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -16,6 +21,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class PostService {
@@ -26,33 +32,66 @@ public class PostService {
     private final PostRepository postRepository;
     private final HashGeneratorService hashServiceClient;
     private final GoogleCloudStorageService googleCloudStorageService;
+    private final JwtTokenUtil jwtTokenUtil;
+    private final UserRepository userRepository;
 
     @Autowired
     public PostService(PostRepository postRepository,
                        HashGeneratorService hashServiceClient,
-                       GoogleCloudStorageService googleCloudStorageService) {
+                       GoogleCloudStorageService googleCloudStorageService,
+                       JwtTokenUtil jwtTokenUtil,
+                       UserRepository userRepository) {
         this.postRepository = postRepository;
         this.hashServiceClient = hashServiceClient;
         this.googleCloudStorageService = googleCloudStorageService;
+        this.jwtTokenUtil = jwtTokenUtil;
+        this.userRepository = userRepository;
     }
 
-    public Post createPost(Post post) {
-        String hash = hashServiceClient.generateUniqueHash();
-        post.setHash(hash);
+    public PostDTO createPost(PostDTO postDTO, String tokenHeader) throws UnauthorizedException, Exception {
+        logger.info("Received request to create a new post");
+        logger.debug("Request details: title = {}, category = {}, is empty content = {}, expirationDate = {}",
+                postDTO.getTitle(), postDTO.getCategory(), postDTO.getContent().isEmpty(), postDTO.getExpirationDate());
 
-        String fileName = hash + FILE_EXTENSION;
-        byte[] contentBytes = post.getContent().getBytes(StandardCharsets.UTF_8);
-        String textUrl = googleCloudStorageService.uploadFile(contentBytes, "text/plain", fileName, post);
+        Post post = new Post();
+        post.setTitle(postDTO.getTitle());
+        post.setCategory(postDTO.getCategory());
+        post.setContent(postDTO.getContent());
+        post.setExpirationDate(OffsetDateTime.parse(postDTO.getExpirationDate()));
 
-        logger.debug("File '{}' was uploaded", fileName);
+        if (tokenHeader != null && !tokenHeader.isEmpty()) {
+            String token = jwtTokenUtil.extractTokenFromHeader(tokenHeader);
+            String username = jwtTokenUtil.extractUsername(token);
 
-        post.setContent(null);
-        post.setTextUrl(textUrl);
+            Optional<User> userOptional = userRepository.findByUsername(username);
+            if (userOptional.isPresent()) {
+                User user = userOptional.get();
+                post.setUser(user);
+                logger.info("Post will be associated with user: {}", user.getUsername());
+            } else {
+                logger.error("User not found for username: {}", username);
+                throw new UnauthorizedException("User not found for username: " + username);
+            }
+        } else {
+            logger.info("No Authorization header provided, proceeding without user association.");
+        }
 
-        return postRepository.save(post);
+        Post createdPost = savePost(post);
+
+        logger.info("Post created successfully with ID: {}", createdPost.getId());
+
+        PostDTO createdPostDTO = new PostDTO();
+        createdPostDTO.setHash(createdPost.getHash());
+        createdPostDTO.setTitle(createdPost.getTitle());
+        createdPostDTO.setCategory(createdPost.getCategory());
+        createdPostDTO.setExpirationDate(createdPost.getExpirationDate().toString());
+
+        return createdPostDTO;
     }
 
-    public Optional<PostDTO> getPostDTOByHash(String hash) {
+    public PostDTO getPostByHash(String hash) throws NotFoundException, Exception {
+        logger.info("Received request to retrieve post with hash: {}", hash);
+
         Optional<Post> postOptional = postRepository.findByHash(hash);
 
         if (postOptional.isPresent()) {
@@ -70,10 +109,54 @@ public class PostService {
             postDTO.setContent(content);
             postDTO.setFileSize(post.getFileSize());
 
-            return Optional.of(postDTO);
+            logger.info("Post retrieved successfully for hash: {}", hash);
+            return postDTO;
         } else {
-            return Optional.empty();
+            logger.warn("No post found for hash: {}", hash);
+            throw new NotFoundException("No post found for hash: " + hash);
         }
+    }
+
+    public List<PostDTO> getRecentPostsDTO() throws Exception {
+        logger.info("Received request to get recent posts");
+
+        List<Post> posts = getRecentPosts();
+
+        logger.info("Successfully retrieved {} recent posts", posts.size());
+
+        List<PostDTO> postDTOs = posts.stream()
+                .map(post -> {
+                    PostDTO dto = new PostDTO();
+                    dto.setHash(post.getHash());
+                    dto.setTitle(post.getTitle());
+                    dto.setCategory(post.getCategory());
+                    dto.setCreatedAt(post.getCreatedAt().toString());
+                    dto.setExpirationDate(post.getExpirationDate().toString());
+                    dto.setViews(post.getViews());
+                    dto.setFileSize(post.getFileSize());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+
+        postDTOs.forEach(postDTO -> logger.debug("PostDTO details: {}", postDTO));
+
+        return postDTOs;
+    }
+
+    public Post savePost(Post post) {
+        String hash = hashServiceClient.generateUniqueHash();
+        post.setHash(hash);
+
+        String fileName = hash + FILE_EXTENSION;
+        byte[] contentBytes = post.getContent().getBytes(StandardCharsets.UTF_8);
+        String textUrl = googleCloudStorageService.uploadFile(contentBytes, "text/plain", fileName, post);
+
+        logger.debug("File '{}' was uploaded", fileName);
+
+        post.setContent(null);
+        post.setTextUrl(textUrl);
+
+        return postRepository.save(post);
     }
 
     public List<Post> getRecentPosts() {
