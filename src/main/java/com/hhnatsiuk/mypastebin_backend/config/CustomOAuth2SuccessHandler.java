@@ -22,6 +22,7 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
     private final JwtTokenUtil jwtTokenUtil;
     private final UserRepository userRepository;
+    private final String redirectUrl = "http://localhost:5173/oauth2/redirect?token=";
 
     public CustomOAuth2SuccessHandler(JwtTokenUtil jwtTokenUtil, UserRepository userRepository) {
         this.jwtTokenUtil = jwtTokenUtil;
@@ -44,10 +45,9 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
         String token = jwtTokenUtil.generateToken(user);
 
-        String redirectUrl = "http://localhost:5173/oauth2/redirect?token=" + token;
 
-        logger.info("Redirecting to frontend: {}", redirectUrl);
+        logger.info("Redirecting to frontend: {}", redirectUrl + token);
 
-        response.sendRedirect(redirectUrl);
+        response.sendRedirect(redirectUrl + token);
     }
 }

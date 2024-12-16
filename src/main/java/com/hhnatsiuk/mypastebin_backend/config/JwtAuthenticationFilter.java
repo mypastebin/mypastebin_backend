@@ -7,14 +7,18 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -22,6 +26,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenUtil jwtTokenUtil;
     private final UserRepository userRepository;
+
+    @Value("${app.security.public.endpoints}")
+    private String publicEndpoints;
+
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     public JwtAuthenticationFilter(JwtTokenUtil jwtTokenUtil, UserRepository userRepository) {
         this.jwtTokenUtil = jwtTokenUtil;
@@ -39,16 +48,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         logger.info("Incoming request to URI: " + requestURI);
         logger.info("Authorization Header: " + (authorizationHeader != null ? authorizationHeader : "No Authorization Header"));
 
-        // FIXME
-        if (requestURI.equals("/api/posts") || requestURI.equals("/api/posts/recent") || requestURI.matches("/api/posts/.*")
-                ||  requestURI.matches("/api/auth/google/callback") || requestURI.startsWith("/oauth2/") || requestURI.equals("/api/auth/google/success")
-                ||  requestURI.startsWith("/oauth2/") || requestURI.startsWith("/login/oauth2/") || requestURI.equals("/api/auth/google/success")) {
+        List<String> endpoints = Arrays.asList(publicEndpoints.split(","));
+
+        if (isPublicEndpoint(requestURI, endpoints)) {
             logger.info("Public endpoint access allowed without token for URI: " + requestURI);
             filterChain.doFilter(request, response);
             return;
         }
 
-        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             token = authorizationHeader.substring(7);
             try {
                 username = jwtTokenUtil.extractUsername(token);
@@ -88,5 +96,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         logger.info("Proceeding with filter chain for URI: " + requestURI);
         filterChain.doFilter(request, response);
     }
+
+    private boolean isPublicEndpoint(String requestURI, List<String> endpoints) {
+        return endpoints.stream().anyMatch(endpoint -> pathMatcher.match(endpoint, requestURI));
+    }
+
 }
 
